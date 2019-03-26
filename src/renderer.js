@@ -20,6 +20,7 @@ export class Renderer {
         } catch (e) {
             throw new Error('Could not initialize WebGL');
         }
+        this.mesh = null;
 
         this.renderer.setClearColor(0x000000, 1);
         this.renderer.setSize(width, height);
@@ -29,19 +30,106 @@ export class Renderer {
 
         this.scene = new Scene();
 
+        this.cameraMovementSpeed = 0.01;
+        this.cameraLookSpeed = 0.01;
+
         this.createCamera();
         this.scene.add(this.camera);
     }
 
+    updateCamera() {
+        if (this.forward) {
+            const dir = new Vector3().copy(this.cameraDirection);
+            this.cameraPosition.add(dir.multiplyScalar(this.cameraMovementSpeed));
+        }
+        if (this.right) {
+            const dir = new Vector3().crossVectors(this.cameraDirection, new Vector3(0, 1, 0));
+            this.cameraPosition.add(dir.multiplyScalar(this.cameraMovementSpeed));
+        }
+        if (this.left) {
+            const dir = new Vector3().crossVectors(this.cameraDirection, new Vector3(0, 1, 0));
+            this.cameraPosition.add(dir.multiplyScalar(-this.cameraMovementSpeed));
+        }
+        if (this.back) {
+            const dir = new Vector3().copy(this.cameraDirection);
+            this.cameraPosition.add(dir.multiplyScalar(-this.cameraMovementSpeed));
+        }
+
+
+        const target = new Vector3().addVectors(this.cameraDirection, this.cameraPosition);
+
+        this.camera.position.set(
+            this.cameraPosition.x,
+            this.cameraPosition.y,
+            this.cameraPosition.z,
+        );
+        this.camera.lookAt(target.x, target.y, target.z);
+    }
+
     createCamera() {
-        this.camera = new PerspectiveCamera(45, this.width / this.height, 1.0, 5000.0);
+        this.camera = new PerspectiveCamera(45, this.width / this.height, 0.001, 10.0);
 
-        const pos = new Vector3(0, 1000, 1000);
+        this.cameraPosition = new Vector3(-1, 0.4, 0);
+        this.cameraDirection = new Vector3(1, 0, 0);
 
-        this.camera.position.x = pos.x;
-        this.camera.position.y = pos.y;
-        this.camera.position.z = pos.z;
-        this.camera.lookAt(0, 0, 0);
+        this.updateCamera();
+
+        let last = null;
+
+        let ha = 0;
+        let va = 0;
+
+        const vLimit = 1.50;
+        document.addEventListener('mousedown', (e) => {
+            last = [e.pageX, e.pageY];
+        });
+        document.addEventListener('mousemove', (e) => {
+            if (last !== null) {
+                const delta = [e.pageX - last[0], e.pageY - last[1]];
+                last = [e.pageX, e.pageY];
+
+                ha += this.cameraLookSpeed * delta[0];
+                va -= this.cameraLookSpeed * delta[1];
+                if (va > vLimit) { va = vLimit; }
+                if (va < -vLimit) { va = -vLimit; }
+
+                this.cameraDirection.set(
+                    Math.cos(ha) * Math.cos(va),
+                    Math.sin(va),
+                    Math.sin(ha) * Math.cos(va),
+                );
+            }
+        });
+        document.addEventListener('mouseup', () => {
+            last = null;
+        });
+
+        this.forward = false;
+        this.right = false;
+        this.left = false;
+        this.back = false;
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'w') {
+                this.forward = true;
+            } else if (e.key === 'd') {
+                this.right = true;
+            } else if (e.key === 's') {
+                this.back = true;
+            } else if (e.key === 'a') {
+                this.left = true;
+            }
+        });
+        document.addEventListener('keyup', (e) => {
+            if (e.key === 'w') {
+                this.forward = false;
+            } else if (e.key === 'd') {
+                this.right = false;
+            } else if (e.key === 's') {
+                this.back = false;
+            } else if (e.key === 'a') {
+                this.left = false;
+            }
+        });
     }
 
     setSize(width, height) {
@@ -52,40 +140,67 @@ export class Renderer {
     }
 
     render() {
+        this.updateCamera();
         this.renderer.render(this.scene, this.camera);
     }
 
     createShader() {
-        const texture = new TextureLoader().load('/static/images/volcano_diff.jpg');
-//        const lightmap = new TextureLoader().load('/static/images/terrain_lightmap.png');
+        const texture = new TextureLoader().load('/static/images/volcano_color.png');
 
         const shader = new ShaderMaterial({
             uniforms: {
                 map: { type: 't', value: texture },
- //               light: { type: 't', value: lightmap },
+                sunDirection: { type: 'v3', value: new Vector3(0, 1, 0) },
+                sunColor: { type: 'v3', value: new Vector3(1.0, 1.0, 1.0) },
+                sunAmbientCoefficient: { type: 'f', value: 0.2 },
             },
             vertexShader: `
-                varying vec3 vNormal;
+                varying vec3 vPositionEyespace;
+                varying vec3 vNormalEyespace;
                 varying vec2 vUV;
 
                 void main() {
-                    vNormal = normal;
+                    vPositionEyespace = (modelViewMatrix * vec4(position, 1.0)).xyz;
+                    vNormalEyespace = (modelViewMatrix * vec4(normalize(normal), 0.0)).xyz;
                     vUV = uv;
                     gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
                 }
             `,
             fragmentShader: `
-                varying vec3 vNormal;
+                varying vec3 vPositionEyespace;
+                varying vec3 vNormalEyespace;
                 varying vec2 vUV;
 
                 uniform sampler2D map;
-//                uniform sampler2D light;
+
+                uniform vec3 sunDirection;
+                uniform vec3 sunColor;
+                uniform float sunAmbientCoefficient;
+
+                vec3 illuminate(vec3 inColor, vec3 P, vec3 N, vec3 E) {
+                    vec3 L = normalize((viewMatrix * vec4(sunDirection, 0.0)).xyz);
+                    float attenuation = 1.0;
+
+                    vec3 ambient = sunAmbientCoefficient * inColor * sunColor;
+
+                    float diffuseCoefficient = max(0.0, dot(N, L));
+                    vec3 diffuse = diffuseCoefficient * inColor * sunColor;
+
+                    float specularCoefficient = 0.0;
+                    vec3 specular = vec3(0.0);
+
+                    vec3 outColor = ambient + attenuation * (diffuse + specular);
+
+                    return outColor;
+                }
 
                 void main() {
-//                    vec4 light = texture2D(light, vUV);
                     vec4 color = texture2D(map, vUV);
-//                    color.rgb *= light.r;
-                    gl_FragColor = color;
+
+                    vec3 N = normalize(vNormalEyespace);
+                    vec3 E = normalize(-vPositionEyespace.xyz);
+
+                    gl_FragColor = vec4(illuminate(color.rgb, vPositionEyespace.xyz, N, E), 1.0);
                 }
             `,
         });
@@ -112,6 +227,7 @@ export class Renderer {
 
         // [-795.5, -123.399, -795.5]
         // [795.5, 123.4, 795.5]
+        let y = 0;
         for (let i = 0; i < numFaces; i++) {
             const a = rawFaces[i][0];
             const b = rawFaces[i][1];
@@ -158,7 +274,7 @@ export class Renderer {
         const shader = this.createShader();
         const mesh = new Mesh(geom, shader);
 
-        console.log('Mesh loaded successfully');
+        this.mesh = mesh;
 
         this.scene.add(mesh);
     }

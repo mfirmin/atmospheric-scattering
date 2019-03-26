@@ -5,7 +5,7 @@ title: Michael Firmin
 <html>
   <head>
     <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
-    <title>Grid Creator</title>
+    <title>Lighting</title>
 
     <link href='https://fonts.googleapis.com/css?family=Roboto:300,400,500,700|Material+Icons' rel="stylesheet">
     <link rel="stylesheet" type="text/css" href="css/main.css">
@@ -23,13 +23,12 @@ title: Michael Firmin
     mainElement.appendChild(renderer.renderer.domElement);
 
     const xmlhttp = new XMLHttpRequest();
-    const url = "/static/data/volcano.json";
+    const url = "/static/data/out.json";
 
     xmlhttp.addEventListener("load", function () {
       console.log("here");
       const data = JSON.parse(this.responseText);
       renderer.loadMesh(data);
-
     });
 
     xmlhttp.onerror = function() {
@@ -39,9 +38,24 @@ title: Michael Firmin
     xmlhttp.open("GET", url, true);
     xmlhttp.send();
 
+    let dayLength = 10000.0;
+    let s = 3.14159 * 2 / dayLength;
+    let t = 0;
+    let last = Date.now();
     function animate() {
-      requestAnimationFrame(animate);
+      const now = Date.now();
+      const delta = now - last;
+      t += now - last;
+      last = now;
 
+      if (renderer.mesh != null) {
+        const sunX = Math.cos(t * s);
+        const sunY = Math.sin(t * s);
+        renderer.mesh.material.uniforms.sunDirection.value.set(sunX, sunY, 0);
+      }
+
+
+      requestAnimationFrame(animate);
       renderer.render();
     }
 
