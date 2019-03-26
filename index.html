@@ -1,0 +1,52 @@
+---
+title: Michael Firmin
+---
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+    <title>Grid Creator</title>
+
+    <link href='https://fonts.googleapis.com/css?family=Roboto:300,400,500,700|Material+Icons' rel="stylesheet">
+    <link rel="stylesheet" type="text/css" href="css/main.css">
+    <script src="static/lighting.js"></script>
+  </head>
+<body>
+  <div id="main"></div>
+
+  <script>
+    const mainElement = document.getElementById('main');
+
+
+    const renderer = new lighting.Renderer(mainElement.offsetWidth, mainElement.offsetHeight);
+
+    mainElement.appendChild(renderer.renderer.domElement);
+
+    const xmlhttp = new XMLHttpRequest();
+    const url = "/static/data/volcano.json";
+
+    xmlhttp.addEventListener("load", function () {
+      console.log("here");
+      const data = JSON.parse(this.responseText);
+      renderer.loadMesh(data);
+
+    });
+
+    xmlhttp.onerror = function() {
+      console.log("error");
+    }
+
+    xmlhttp.open("GET", url, true);
+    xmlhttp.send();
+
+    function animate() {
+      requestAnimationFrame(animate);
+
+      renderer.render();
+    }
+
+    requestAnimationFrame(animate);
+
+  </script>
+</body>
+</html>

@@ -1,0 +1,17 @@
+{
+    "extends": "airbnb",
+    "rules": {
+        "indent": ["error", 4, { "SwitchCase": 1 }],
+        "no-multi-spaces": ["error", { "exceptions": { "VariableDeclarator": true }}],
+        "no-param-reassign": "off",
+        "no-restricted-syntax": "off",
+        "no-underscore-dangle": "off",
+        "no-plusplus": "off",
+        "import/prefer-default-export": "off",
+        "react/destructuring-assignment": "off"
+    },
+    "env": {
+        "browser": true,
+        "jquery": true
+    }
+}

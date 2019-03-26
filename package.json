@@ -1,0 +1,22 @@
+{
+  "name": "grid-creator",
+  "version": "0.0.0",
+  "description": "Tool to create 3D grids for Erda game",
+  "scripts": {
+    "build": "./node_modules/.bin/rollup --config rollup.config.js",
+    "watch": "./node_modules/rollup/bin/rollup --watch --config rollup.config.js"
+  },
+  "author": "Michael Firmin",
+  "devDependencies": {
+    "eslint": "*",
+    "eslint-config-airbnb": "*",
+    "eslint-plugin-import": "*",
+    "eslint-plugin-jsx-a11y": "*",
+    "eslint-plugin-react": "*",
+    "rollup": "*",
+    "rollup-plugin-node-globals": "^1.2.1",
+    "rollup-plugin-node-resolve": "^3.3.0",
+    "rollup-plugin-commonjs": "*",
+    "rollup-plugin-replace": "*"
+  }
+}
