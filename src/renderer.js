@@ -214,8 +214,6 @@ export class Renderer {
         const rawFaces = data.meshes[0].faces;
         const rawUVs = data.meshes[0].texturecoords[0];
 
-        console.log(data);
-
         const numFaces = rawFaces.length;
         const numVertices = numFaces * 3;
 
@@ -229,42 +227,77 @@ export class Renderer {
         // [795.5, 123.4, 795.5]
         let y = 0;
         for (let i = 0; i < numFaces; i++) {
-            const a = rawFaces[i][0];
-            const b = rawFaces[i][1];
-            const c = rawFaces[i][2];
+            const fa = rawFaces[i][0];
+            const fb = rawFaces[i][1];
+            const fc = rawFaces[i][2];
 
-            vs[(i * 9) + 0] = rawVertices[(a * 3) + 0];
-            vs[(i * 9) + 1] = rawVertices[(a * 3) + 1];
-            vs[(i * 9) + 2] = rawVertices[(a * 3) + 2];
+            const A = new Vector3(
+                rawVertices[(fa * 3) + 0],
+                rawVertices[(fa * 3) + 1],
+                rawVertices[(fa * 3) + 2],
+            );
 
-            vs[(i * 9) + 3] = rawVertices[(b * 3) + 0];
-            vs[(i * 9) + 4] = rawVertices[(b * 3) + 1];
-            vs[(i * 9) + 5] = rawVertices[(b * 3) + 2];
+            const B = new Vector3(
+                rawVertices[(fb * 3) + 0],
+                rawVertices[(fb * 3) + 1],
+                rawVertices[(fb * 3) + 2],
+            );
 
-            vs[(i * 9) + 6] = rawVertices[(c * 3) + 0];
-            vs[(i * 9) + 7] = rawVertices[(c * 3) + 1];
-            vs[(i * 9) + 8] = rawVertices[(c * 3) + 2];
+            const C = new Vector3(
+                rawVertices[(fc * 3) + 0],
+                rawVertices[(fc * 3) + 1],
+                rawVertices[(fc * 3) + 2],
+            );
 
-            ns[(i * 9) + 0] = rawNormals[(a * 3) + 0];
-            ns[(i * 9) + 1] = rawNormals[(a * 3) + 1];
-            ns[(i * 9) + 2] = rawNormals[(a * 3) + 2];
+            const AB = new Vector3().subVectors(B, A).normalize();
+            const AC = new Vector3().subVectors(C, A).normalize();
 
-            ns[(i * 9) + 3] = rawNormals[(b * 3) + 0];
-            ns[(i * 9) + 4] = rawNormals[(b * 3) + 1];
-            ns[(i * 9) + 5] = rawNormals[(b * 3) + 2];
+            const N = new Vector3().crossVectors(AB, AC).normalize();
 
-            ns[(i * 9) + 6] = rawNormals[(c * 3) + 0];
-            ns[(i * 9) + 7] = rawNormals[(c * 3) + 1];
-            ns[(i * 9) + 8] = rawNormals[(c * 3) + 2];
+            vs[(i * 9) + 0] = A.x;
+            vs[(i * 9) + 1] = A.y;
+            vs[(i * 9) + 2] = A.z;
 
-            uvs[(i * 6) + 0] = rawUVs[(a * 2) + 0];
-            uvs[(i * 6) + 1] = rawUVs[(a * 2) + 1];
+            vs[(i * 9) + 3] = B.x;
+            vs[(i * 9) + 4] = B.y;
+            vs[(i * 9) + 5] = B.z;
 
-            uvs[(i * 6) + 2] = rawUVs[(b * 2) + 0];
-            uvs[(i * 6) + 3] = rawUVs[(b * 2) + 1];
+            vs[(i * 9) + 6] = C.x;
+            vs[(i * 9) + 7] = C.y;
+            vs[(i * 9) + 8] = C.z;
 
-            uvs[(i * 6) + 4] = rawUVs[(c * 2) + 0];
-            uvs[(i * 6) + 5] = rawUVs[(c * 2) + 1];
+//            ns[(i * 9) + 0] = N.x;
+//            ns[(i * 9) + 1] = N.y;
+//            ns[(i * 9) + 2] = N.z;
+//
+//            ns[(i * 9) + 3] = N.x;
+//            ns[(i * 9) + 4] = N.y;
+//            ns[(i * 9) + 5] = N.z;
+//
+//            ns[(i * 9) + 6] = N.x;
+//            ns[(i * 9) + 7] = N.y;
+//            ns[(i * 9) + 8] = N.z;
+
+            ns[(i * 9) + 0] = rawNormals[(fa * 3) + 0];
+            ns[(i * 9) + 1] = rawNormals[(fa * 3) + 1];
+            ns[(i * 9) + 2] = rawNormals[(fa * 3) + 2];
+
+            ns[(i * 9) + 3] = rawNormals[(fb * 3) + 0];
+            ns[(i * 9) + 4] = rawNormals[(fb * 3) + 1];
+            ns[(i * 9) + 5] = rawNormals[(fb * 3) + 2];
+
+            ns[(i * 9) + 6] = rawNormals[(fc * 3) + 0];
+            ns[(i * 9) + 7] = rawNormals[(fc * 3) + 1];
+            ns[(i * 9) + 8] = rawNormals[(fc * 3) + 2];
+
+            uvs[(i * 6) + 0] = rawUVs[(fa * 2) + 0];
+            uvs[(i * 6) + 1] = rawUVs[(fa * 2) + 1];
+
+            uvs[(i * 6) + 2] = rawUVs[(fb * 2) + 0];
+            uvs[(i * 6) + 3] = rawUVs[(fb * 2) + 1];
+
+            uvs[(i * 6) + 4] = rawUVs[(fc * 2) + 0];
+            uvs[(i * 6) + 5] = rawUVs[(fc * 2) + 1];
         }
 
         geom.addAttribute('position', new BufferAttribute(vs, 3));
