@@ -38,7 +38,8 @@ title: Michael Firmin
     xmlhttp.open("GET", url, true);
     xmlhttp.send();
 
-    let dayLength = 10000.0;
+    let sun = 0.0;
+    let dayLength = 200000.0;
     let s = 3.14159 * 2 / dayLength;
     let t = 0;
     let last = Date.now();
@@ -51,7 +52,11 @@ title: Michael Firmin
       if (renderer.mesh != null) {
         const sunX = Math.cos(t * s);
         const sunY = Math.sin(t * s);
+
+//        const sunX = Math.cos(sun);
+//        const sunY = Math.sin(sun);
         renderer.mesh.material.uniforms.sunDirection.value.set(sunX, sunY, 0);
+        renderer.sky.material.uniforms.sunDirection.value.set(sunX, sunY, 0);
       }
 
 
