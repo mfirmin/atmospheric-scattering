@@ -26,7 +26,7 @@ title: Michael Firmin
 
 
     <div style="margin-top: 10px; margin-bottom: 10px; font-weight: bold; width=100%">Links</div>
-      <a href="Source">About</a><br>
+      <a href="https://github.com/mfirmin/atmospheric-scattering">Source</a><br>
       <a href="https://www.scratchapixel.com/lessons/procedural-generation-virtual-worlds/simulating-sky/simulating-colors-of-the-sky">About</a><br>
       <a href="https://www.turbosquid.com/3d-models/free-max-model-volcano/971755">Volcano Model</a> (Daniel Magyar)
   </div>
@@ -34,7 +34,6 @@ title: Michael Firmin
   <div id="help"></div>
 
   <script>
-
     document.addEventListener('keyup', (e) => {
       if (e.key === 'c') {
         document.getElementById('info').toggleAttribute("hidden");
@@ -76,6 +75,17 @@ title: Michael Firmin
 
     requestAnimationFrame(animate);
 
+    renderer.renderer.domElement.addEventListener('click', (e) => {
+        renderer.renderer.domElement.requestPointerLock();
+    });
+    document.addEventListener('pointerlockchange', (e) => {
+      if (document.pointerLockElement === renderer.renderer.domElement) {
+        renderer.locked = true;
+      } else {
+        renderer.locked = false;
+      }
+
+    }, false );
   </script>
 </body>
 </html>

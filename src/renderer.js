@@ -101,19 +101,14 @@ export class Renderer {
 
         this.updateCamera();
 
-        let last = null;
-
         let ha = 0;
         let va = 0;
 
         const vLimit = 1.50;
-        document.addEventListener('mousedown', (e) => {
-            last = [e.pageX, e.pageY];
-        });
+
         document.addEventListener('mousemove', (e) => {
-            if (last !== null) {
-                const delta = [e.pageX - last[0], e.pageY - last[1]];
-                last = [e.pageX, e.pageY];
+            if (this.locked) {
+                const delta = [e.movementX, e.movementY];
 
                 ha += this.cameraLookSpeed * delta[0];
                 va -= this.cameraLookSpeed * delta[1];
@@ -126,9 +121,6 @@ export class Renderer {
                     Math.sin(ha) * Math.cos(va),
                 );
             }
-        });
-        document.addEventListener('mouseup', () => {
-            last = null;
         });
 
         this.forward = false;
