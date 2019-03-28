@@ -9,7 +9,7 @@ title: Michael Firmin
 
     <link href='https://fonts.googleapis.com/css?family=Roboto:300,400,500,700|Material+Icons' rel="stylesheet">
     <link rel="stylesheet" type="text/css" href="css/main.css">
-    <script src="/static/lighting.js"></script>
+    <script src="static/lighting.js"></script>
   </head>
 <body>
   <div id="main"></div>
@@ -49,10 +49,9 @@ title: Michael Firmin
     mainElement.appendChild(renderer.renderer.domElement);
 
     const xmlhttp = new XMLHttpRequest();
-    const url = "/static/data/out.json";
+    const url = "static/data/out.json";
 
     xmlhttp.addEventListener("load", function () {
-      console.log("here");
       const data = JSON.parse(this.responseText);
       renderer.loadMesh(data);
     });
