@@ -47041,7 +47041,7 @@
 	    }
 
 	    createShader() {
-	        const texture = new TextureLoader().load('/static/images/volcano_color.png');
+	        const texture = new TextureLoader().load('static/images/volcano_color.png');
 
 	        const shader = new ShaderMaterial({
 	            uniforms: {
