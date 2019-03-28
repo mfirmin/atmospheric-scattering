@@ -23,6 +23,10 @@ export class Renderer {
         } catch (e) {
             throw new Error('Could not initialize WebGL');
         }
+        this.timeEnabled = false;
+        this.sunAngle = 1.57;
+
+        this.sunSpeed = 3.14159 / 4000.0;
         this.mesh = null;
         this.sky = null;
 
@@ -73,7 +77,16 @@ export class Renderer {
         if (this.sky !== null) {
             this.sky.position.set(
                 this.cameraPosition.x,
-                this.cameraPosition.y - 495.33,
+                this.cameraPosition.y,
+                this.cameraPosition.z,
+            );
+
+            this.sky.material.uniforms.cameraAltitude.value = this.cameraPosition.y * 4000.0;
+        }
+        if (this.mesh !== null) {
+            this.mesh.material.uniforms.cameraPos.value.set(
+                this.cameraPosition.x,
+                this.cameraPosition.y,
                 this.cameraPosition.z,
             );
         }
@@ -83,7 +96,7 @@ export class Renderer {
     createCamera() {
         this.camera = new PerspectiveCamera(45, this.width / this.height, 0.001, 1000.0);
 
-        this.cameraPosition = new Vector3(-1, 0.04, 0);
+        this.cameraPosition = new Vector3(-1, -0.05, 0);
         this.cameraDirection = new Vector3(1, 0, 0);
 
         this.updateCamera();
@@ -122,6 +135,9 @@ export class Renderer {
         this.right = false;
         this.left = false;
         this.back = false;
+
+        this.timeForward = false;
+        this.timeBackward = false;
         document.addEventListener('keydown', (e) => {
             if (e.key === 'w') {
                 this.forward = true;
@@ -131,6 +147,10 @@ export class Renderer {
                 this.back = true;
             } else if (e.key === 'a') {
                 this.left = true;
+            } else if (e.key === 'q') {
+                this.timeBackward = true;
+            } else if (e.key === 'e') {
+                this.timeForward = true;
             }
         });
         document.addEventListener('keyup', (e) => {
@@ -142,6 +162,36 @@ export class Renderer {
                 this.back = false;
             } else if (e.key === 'a') {
                 this.left = false;
+            } else if (e.key === 'q') {
+                this.timeBackward = false;
+            } else if (e.key === 'e') {
+                this.timeForward = false;
+            } else if (e.key === '1') {
+                this.sunAngle = 0.1;
+            } else if (e.key === '2') {
+                this.sunAngle = 0.7;
+            } else if (e.key === '3') {
+                this.sunAngle = 1.57;
+            } else if (e.key === '4') {
+                this.sunAngle = 2.6;
+            } else if (e.key === '5') {
+                this.sunAngle = 3.0;
+            } else if (e.key === '6') {
+                this.sunAngle = 3.12;
+            } else if (e.key === ' ') {
+                this.timeEnabled = !this.timeEnabled;
+            } else if (e.key === 'r') {
+                this.sky.material.uniforms.rayleigh.value =
+                    +!this.sky.material.uniforms.rayleigh.value;
+
+                this.mesh.material.uniforms.rayleigh.value =
+                    +!this.mesh.material.uniforms.rayleigh.value;
+            } else if (e.key === 'm') {
+                this.sky.material.uniforms.mie.value =
+                    +!this.sky.material.uniforms.mie.value;
+
+                this.mesh.material.uniforms.mie.value =
+                    +!this.mesh.material.uniforms.mie.value;
             }
         });
     }
@@ -153,8 +203,27 @@ export class Renderer {
         this.renderer.setSize(width, height);
     }
 
-    render() {
+    updateSun() {
+        const sunX = Math.cos(this.sunAngle);
+        const sunY = Math.sin(this.sunAngle);
+
+        if (this.mesh !== null) {
+            this.mesh.material.uniforms.sunDirection.value.set(sunX, sunY, 0);
+            this.sky.material.uniforms.sunDirection.value.set(sunX, sunY, 0);
+            this.sky.material.uniforms.exposure.value = sunY * 4;
+            this.mesh.material.uniforms.exposure.value = Math.max(sunY * 4, 1);
+        }
+    }
+
+    render(dt) {
+        if (this.timeEnabled || this.timeForward) {
+            this.sunAngle += dt * this.sunSpeed;
+        } else if (this.timeBackward) {
+            this.sunAngle -= dt * this.sunSpeed;
+        }
+
         this.updateCamera();
+        this.updateSun();
         this.renderer.render(this.scene, this.camera);
     }
 
@@ -165,24 +234,34 @@ export class Renderer {
             uniforms: {
                 map: { type: 't', value: texture },
                 sunDirection: { type: 'v3', value: new Vector3(0, 1, 0) },
-                sunColor: { type: 'v3', value: new Vector3(1.0, 1.0, 1.0) },
-                sunAmbientCoefficient: { type: 'f', value: 0.2 },
+                sunColor: { type: 'v3', value: new Vector3(20.0, 20.0, 20.0) },
+                sunAmbientCoefficient: { type: 'f', value: 0.1 },
+
+                earthRadius: { type: 'f', value: 6360000 },
+                atmosphereRadius: { type: 'f', value: 6420000 },
+
+                cameraPos: { type: 'v3', value: new Vector3(0, 0, 0) },
+
+                exposure: { type: 'f', value: 1 },
+
+                rayleigh: { type: 'f', value: 1 },
+                mie: { type: 'f', value: 1 },
             },
             vertexShader: `
-                varying vec3 vPositionEyespace;
-                varying vec3 vNormalEyespace;
+                varying vec3 vPosition;
+                varying vec3 vNormal;
                 varying vec2 vUV;
 
                 void main() {
-                    vPositionEyespace = (modelViewMatrix * vec4(position, 1.0)).xyz;
-                    vNormalEyespace = (modelViewMatrix * vec4(normalize(normal), 0.0)).xyz;
                     vUV = uv;
+                    vPosition = position;
+                    vNormal = normal;
                     gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
                 }
             `,
             fragmentShader: `
-                varying vec3 vPositionEyespace;
-                varying vec3 vNormalEyespace;
+                varying vec3 vPosition;
+                varying vec3 vNormal;
                 varying vec2 vUV;
 
                 uniform sampler2D map;
@@ -191,14 +270,39 @@ export class Renderer {
                 uniform vec3 sunColor;
                 uniform float sunAmbientCoefficient;
 
-                vec3 illuminate(vec3 inColor, vec3 P, vec3 N, vec3 E) {
-                    vec3 L = normalize((viewMatrix * vec4(sunDirection, 0.0)).xyz);
+                uniform vec3 cameraPos;
+
+                uniform float atmosphereRadius;
+                uniform float earthRadius;
+
+                uniform float exposure;
+
+                uniform float rayleigh;
+                uniform float mie;
+
+                const int numSamples = 16;
+                const int numSamplesLight = 16;
+
+                const float Hr = 7994.0;
+                const float Hm = 1200.0;
+
+                const float g = 0.76;
+
+                const float pi = 3.1415926535;
+                const float twopi = 6.28318530718;
+                const float halfpi = 1.57079632679;
+
+                const vec3 betaR = vec3(5.8e-6, 13.5e-6, 33.1e-6);
+                const vec3 betaM = vec3(21e-6);
+
+                vec3 illuminate(vec3 inColor, vec3 lightColor, vec3 P, vec3 N, vec3 E) {
+                    vec3 L = normalize(sunDirection);
                     float attenuation = 1.0;
 
-                    vec3 ambient = sunAmbientCoefficient * inColor * sunColor;
+                    vec3 ambient = sunAmbientCoefficient * inColor * sunColor * 0.05;
 
                     float diffuseCoefficient = max(0.0, dot(N, L));
-                    vec3 diffuse = diffuseCoefficient * inColor * sunColor;
+                    vec3 diffuse = diffuseCoefficient * inColor * lightColor;
 
                     float specularCoefficient = 0.0;
                     vec3 specular = vec3(0.0);
@@ -208,13 +312,120 @@ export class Renderer {
                     return outColor;
                 }
 
+                float raySphereIntersect(vec3 ro, vec3 rd, vec3 center, float radius) {
+                    float A, B, C;
+                    vec3 OC = ro - center;
+                    C = dot(OC, OC) - radius * radius;
+                    B = dot(OC * 2.0, rd);
+                    A = dot(rd, rd);
+                    float delta = B * B - 4.0 * A * C;
+
+                    if (delta < 0.0) { return -1.0; }
+                    else if (delta == 0.0) {
+                        if (-B / (2.0 * A) < 0.0) {
+                            return -1.0;
+                        } else {
+                            return -B / (2.0 * A);
+                        }
+                    } else {
+                        float sqrtDelta = sqrt(delta);
+                        float first = (-B + sqrtDelta) / (2.0 * A);
+                        float second = (-B - sqrtDelta) / (2.0 * A);
+
+                        if (first >= 0.0 && second >= 0.0) {
+                            return first <= second ? first : second;
+                        } else if (first < 0.0 && second < 0.0) {
+                            return -1.0;
+                        } else {
+                            return first < 0.0 ? second : first;
+                        }
+                    }
+                }
+
+                vec3 computeAtmosphereColor(vec3 origin) {
+                    vec3 positionModel = vec3(vPosition.x * 4000.0, earthRadius + vPosition.y * 4000.0, vPosition.z * 4000.0);
+                    vec3 OM = positionModel - origin;
+                    float distanceToModel = length(OM);
+                    vec3 directionToModel = normalize(OM);
+                    vec3 L = normalize(sunDirection);
+
+                    float ds = distanceToModel / (float(numSamples));
+
+                    float mu = dot(directionToModel, L);
+
+                    float phaseR = 3.0 / (16.0 * pi) * (1.0 + mu * mu);
+                    float phaseM = 3.0 / (8.0 * pi) * ((1.0 - g * g) * (1.0 + mu * mu)) / ((2.0 + g * g) * pow((1.0 + g * g - 2.0 * g * mu), 1.5));
+
+                    // transmittance (aka optical depth) from view (V) to sample (S) (R)ayleigh and (M)ie
+                    float TVSR = 0.0;
+                    float TVSM = 0.0;
+
+                    vec3 sumR = vec3(0.0);
+                    vec3 sumM = vec3(0.0);
+
+                    float tCurrent = 0.0;
+                    for (int i = 0; i < numSamples; i++) {
+                        vec3 samplePosition = origin + (tCurrent + ds * 0.5) * directionToModel;
+
+                        float sampleHeight = length(samplePosition) - earthRadius;
+
+                        float hr = exp(-sampleHeight / Hr) * ds;
+                        float hm = exp(-sampleHeight / Hm) * ds;
+
+                        TVSR += hr;
+                        TVSM += hm;
+
+                        // compute the ray from the sample to the atmosphere along the light direction
+
+                        float t = raySphereIntersect(samplePosition, L, vec3(0.0, 0.0, 0.0), atmosphereRadius);
+                        float dsl = t / (float(numSamplesLight));
+
+                        // transmittance from sample to atmosphere along light ray
+                        float TSAR = 0.0;
+                        float TSAM = 0.0;
+
+                        bool broken = false;
+                        float tCurrentLight = 0.0;
+                        for (int j = 0; j < numSamplesLight; ++j) {
+                            vec3 samplePositionLight = samplePosition + (tCurrentLight + dsl * 0.5) * L;
+                            float sampleHeightLight = length(samplePositionLight) - earthRadius;
+
+                            // avoid looking inside the earth?
+//                            if (sampleHeightLight < 0.0) { broken = true; break; }
+
+                            TSAR += exp(-sampleHeightLight / Hr) * dsl;
+                            TSAM += exp(-sampleHeightLight / Hm) * dsl;
+
+                            tCurrentLight += dsl;
+                        }
+
+                        if (!broken) {
+                            vec3 tau = betaR * (TVSR + TSAR) * rayleigh + betaM * 1.1 * (TVSM + TSAM) * mie;
+                            vec3 attenuation = vec3(exp(-tau.r), exp(-tau.g), exp(-tau.b));
+
+                            sumR += attenuation * hr;
+                            sumM += attenuation * hm;
+                        }
+
+                        tCurrent += ds;
+                    }
+
+                    return vec3(sumR * betaR * phaseR * rayleigh + sumM * betaM * phaseM * mie) * sunColor;
+                }
+
                 void main() {
                     vec4 color = texture2D(map, vUV);
 
-                    vec3 N = normalize(vNormalEyespace);
-                    vec3 E = normalize(-vPositionEyespace.xyz);
+                    vec3 viewPosition = vec3(cameraPos.x * 4000.0, earthRadius + cameraPos.y * 4000.0, cameraPos.z * 4000.0);
+                    vec3 atmosphereColor = computeAtmosphereColor(viewPosition);
 
-                    gl_FragColor = vec4(illuminate(color.rgb, vPositionEyespace.xyz, N, E), 1.0);
+
+                    vec3 N = normalize(vNormal);
+                    color = vec4(illuminate(color.rgb, atmosphereColor, vPosition.xyz, N, cameraPos - vPosition), 1.0);
+
+                    vec3 mappedColor = vec3(1.0) - exp(-color.rgb * exposure);
+
+                    gl_FragColor = vec4(mappedColor, 1.0);
                 }
             `,
         });
@@ -237,8 +448,6 @@ export class Renderer {
         const ns = new Float32Array(numVertices * 3);
         const uvs = new Float32Array(numVertices * 2);
 
-        // [-795.5, -123.399, -795.5]
-        // [795.5, 123.4, 795.5]
         let y = 0;
         for (let i = 0; i < numFaces; i++) {
             const fa = rawFaces[i][0];
@@ -339,35 +548,39 @@ export class Renderer {
                 cameraAltitude: { type: 'f', value: 1 },
 
                 exposure: { type: 'f', value: 1 },
+
+                rayleigh: { type: 'f', value: 1 },
+                mie: { type: 'f', value: 1 },
             },
             vertexShader: `
-                varying vec3 vPosition;
-                varying vec3 vPositionAtmosphere;
+                varying vec3 vDirection;
                 varying vec3 vNormal;
 
                 uniform float atmosphereRadius;
 
                 void main() {
                     // map model position into "simulation" position
-                    vPositionAtmosphere = position * vec3(0.002 * atmosphereRadius);
-                    vPosition = position;
+                    vDirection = normalize(position);
                     gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
                 }
             `,
             fragmentShader: `
-                varying vec3 vPosition;
-                varying vec3 vPositionAtmosphere;
+                varying vec3 vDirection;
                 varying vec3 vNormal;
 
                 uniform vec3 sunDirection;
                 uniform vec3 sunColor;
                 uniform float sunAmbientCoefficient;
 
-                uniform float atmosphereRadius;
-                uniform float earthRadius;
                 uniform float cameraAltitude;
 
+                uniform float atmosphereRadius;
+                uniform float earthRadius;
+
                 uniform float exposure;
+
+                uniform float rayleigh;
+                uniform float mie;
 
                 const int numSamples = 16;
                 const int numSamplesLight = 8;
@@ -416,9 +629,10 @@ export class Renderer {
                 }
 
                 vec3 computeAtmosphereColor(vec3 origin) {
-                    vec3 OA = vPositionAtmosphere - origin;
-                    float distanceToAtmosphere = length(OA);
-                    vec3 directionToAtmosphere = normalize(OA);
+                    float distanceToAtmosphere = raySphereIntersect(origin, normalize(vDirection), vec3(0.0, 0.0, 0.0), atmosphereRadius);
+                    vec3 positionAtmosphere = origin + distanceToAtmosphere * vDirection;
+                    vec3 OA = positionAtmosphere - origin;
+                    vec3 directionToAtmosphere = normalize(vDirection);
                     vec3 L = normalize(sunDirection);
 
                     float ds = distanceToAtmosphere / (float(numSamples));
@@ -472,17 +686,17 @@ export class Renderer {
                         }
 
                         if (!broken) {
-                            vec3 tau = betaR * (TVSR + TSAR) + betaM * 1.1 * (TVSM + TSAM);
+                            vec3 tau = rayleigh * betaR * (TVSR + TSAR) + mie * betaM * 1.1 * (TVSM + TSAM);
                             vec3 attenuation = vec3(exp(-tau.r), exp(-tau.g), exp(-tau.b));
 
                             sumR += attenuation * hr;
-                            sumM += 0.2 * attenuation * hm;
+                            sumM += attenuation * hm;
                         }
 
                         tCurrent += ds;
                     }
 
-                    return vec3(sumR * betaR * phaseR + sumM * betaM * phaseM) * sunColor;
+                    return vec3(sumR * betaR * phaseR * rayleigh + sumM * betaM * phaseM * mie) * sunColor;
                 }
 
                 void main() {

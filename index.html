@@ -13,8 +13,34 @@ title: Michael Firmin
   </head>
 <body>
   <div id="main"></div>
+  <div id="info">
+    <div style="margin-top: 2px; margin-bottom: 10px; font-weight: bold; text-align: center; width=100%">Atmospheric Scattering Simulation</div>
+    <div style="margin-top: 10px; margin-bottom: 10px; font-weight: bold; width=100%">Controls</div>
+    WASD + Mouse: Move Camera <br>
+    Space: Animate sun <br>
+    1-6: Preset sun angles <br>
+    Q,E: Manually adjust sun angle <br>
+    R: Toggle Rayleigh Scattering <br>
+    M: Toggle Mie Scattering <br>
+    C: Show/Hide this window
+
+
+    <div style="margin-top: 10px; margin-bottom: 10px; font-weight: bold; width=100%">Links</div>
+      <a href="Source">About</a><br>
+      <a href="https://www.scratchapixel.com/lessons/procedural-generation-virtual-worlds/simulating-sky/simulating-colors-of-the-sky">About</a><br>
+      <a href="https://www.turbosquid.com/3d-models/free-max-model-volcano/971755">Volcano Model</a> (Daniel Magyar)
+  </div>
+
+  <div id="help"></div>
 
   <script>
+
+    document.addEventListener('keyup', (e) => {
+      if (e.key === 'c') {
+        document.getElementById('info').toggleAttribute("hidden");
+      }
+    });
+
     const mainElement = document.getElementById('main');
 
 
@@ -38,30 +64,14 @@ title: Michael Firmin
     xmlhttp.open("GET", url, true);
     xmlhttp.send();
 
-    let sun = 0.0;
-    let dayLength = 200000.0;
-    let s = 3.14159 * 2 / dayLength;
-    let t = 0;
     let last = Date.now();
     function animate() {
       const now = Date.now();
       const delta = now - last;
-      t += now - last;
       last = now;
 
-      if (renderer.mesh != null) {
-        const sunX = Math.cos(t * s);
-        const sunY = Math.sin(t * s);
-
-//        const sunX = Math.cos(sun);
-//        const sunY = Math.sin(sun);
-        renderer.mesh.material.uniforms.sunDirection.value.set(sunX, sunY, 0);
-        renderer.sky.material.uniforms.sunDirection.value.set(sunX, sunY, 0);
-      }
-
-
       requestAnimationFrame(animate);
-      renderer.render();
+      renderer.render(delta);
     }
 
     requestAnimationFrame(animate);
