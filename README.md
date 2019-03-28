@@ -1,2 +1,2 @@
-# erda-grid-creator
+# Atmospheric Scattering Demo
 
