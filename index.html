@@ -18,6 +18,7 @@ title: Michael Firmin
     <div style="margin-top: 10px; margin-bottom: 10px; font-weight: bold; width=100%">Controls</div>
     Click to Start! <br>
     WASD + Mouse: Move Camera <br>
+    F11: Toggle Fullscreen mode <br>
     Space: Animate sun <br>
     1-6: Preset sun angles <br>
     Q,E: Manually adjust sun angle <br>
@@ -42,7 +43,6 @@ title: Michael Firmin
     });
 
     const mainElement = document.getElementById('main');
-
 
     const renderer = new lighting.Renderer(mainElement.offsetWidth, mainElement.offsetHeight);
 
@@ -84,8 +84,12 @@ title: Michael Firmin
       } else {
         renderer.locked = false;
       }
-
     }, false );
+
+    window.onresize = (e) => {
+      const element = document.getElementById('main');
+      renderer.setSize(element.offsetWidth, element.offsetHeight);
+    };
   </script>
 </body>
 </html>

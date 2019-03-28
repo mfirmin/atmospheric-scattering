@@ -47014,6 +47014,9 @@
 	        this.height = height;
 
 	        this.renderer.setSize(width, height);
+
+	        this.camera.aspect = width / height;
+	        this.camera.updateProjectionMatrix();
 	    }
 
 	    updateSun() {
